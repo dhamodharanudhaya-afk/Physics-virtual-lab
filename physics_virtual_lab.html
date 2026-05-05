@@ -1,0 +1,958 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2236;--border:#2a3a5c;
+  --accent:#00d4ff;--accent2:#7c3aed;--accent3:#10b981;--accent4:#f59e0b;
+  --text:#e2e8f0;--muted:#64748b;--danger:#ef4444;
+  --font-head:'Syne',sans-serif;--font-mono:'Space Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh}
+.lab-wrap{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{font-size:18px;font-weight:800;letter-spacing:-0.5px;color:var(--accent)}
+.logo span{color:var(--text)}
+.badge{font-size:10px;font-family:var(--font-mono);background:var(--accent2);color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:1px}
+.nav-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.tab{font-size:11px;font-family:var(--font-mono);padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:.2s;letter-spacing:.5px}
+.tab:hover{color:var(--text);border-color:var(--accent)}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.main{display:flex;flex:1;gap:0}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:16px;display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.sidebar-label{font-size:9px;font-family:var(--font-mono);color:var(--muted);letter-spacing:2px;margin:8px 0 4px;text-transform:uppercase}
+.exp-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-family:var(--font-head);font-weight:600;text-align:left;transition:.2s}
+.exp-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border)}
+.exp-btn.active{background:var(--surface2);color:var(--text);border-color:var(--accent)}
+.exp-btn .icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.canvas-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.experiment-panel{display:none;flex:1;flex-direction:column}
+.experiment-panel.visible{display:flex}
+.exp-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.exp-title{font-size:16px;font-weight:700}
+.exp-desc{font-size:12px;color:var(--muted);font-family:var(--font-mono);margin-left:auto}
+.exp-body{display:flex;flex:1;gap:0;overflow:hidden}
+.canvas-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;position:relative}
+canvas{border-radius:10px;border:1px solid var(--border);background:#070d1a}
+.controls-col{width:230px;background:var(--surface);border-left:1px solid var(--border);padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.ctrl-group label{font-size:11px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.5px;display:block;margin-bottom:6px}
+.ctrl-group input[type=range]{width:100%;accent-color:var(--accent)}
+.val-display{font-size:13px;color:var(--accent);font-family:var(--font-mono);font-weight:700;margin-top:2px}
+.readout{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--font-mono);font-size:11px}
+.readout-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)}
+.readout-row:last-child{border:none}
+.readout-row .lbl{color:var(--muted)}
+.readout-row .val{color:var(--accent3)}
+.run-btn{width:100%;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#000;font-family:var(--font-head);font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.5px;transition:.15s}
+.run-btn:hover{opacity:.85}
+.run-btn.stop{background:var(--danger)}
+.reset-btn{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-head);font-size:12px;cursor:pointer;transition:.15s}
+.reset-btn:hover{border-color:var(--text);color:var(--text)}
+.status-bar{background:var(--surface);border-top:1px solid var(--border);padding:6px 20px;font-family:var(--font-mono);font-size:10px;color:var(--muted);display:flex;gap:24px}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent3);margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+
+<div class="lab-wrap">
+<div class="topbar">
+  <div class="logo">⚛ PHYSLAB<span>.io</span></div>
+  <div class="badge">VIRTUAL</div>
+  <div class="nav-tabs">
+    <button class="tab active" onclick="setCategory('mechanics')">Mechanics</button>
+    <button class="tab" onclick="setCategory('waves')">Waves</button>
+    <button class="tab" onclick="setCategory('em')">Electromagnetism</button>
+    <button class="tab" onclick="setCategory('optics')">Optics</button>
+  </div>
+</div>
+
+<div class="main">
+<div class="sidebar">
+  <div class="sidebar-label">Experiments</div>
+  <div id="exp-list"></div>
+</div>
+
+<div class="canvas-area">
+
+<!-- PROJECTILE -->
+<div class="experiment-panel" id="panel-projectile">
+  <div class="exp-header">
+    <span style="font-size:20px">🎯</span>
+    <div class="exp-title">Projectile Motion</div>
+    <div class="exp-desc">2D kinematics · air resistance optional</div>
+  </div>
+  <div class="exp-body">
+    <div class="canvas-col">
+      <canvas id="c-projectile" width="520" height="340"></canvas>
+    </div>
+    <div class="controls-col">
+      <div class="ctrl-group">
+        <label>INITIAL VELOCITY (m/s)</label>
+        <input type="range" id="pm-v" min="10" max="100" value="40" oninput="updatePM()">
+        <div class="val-display" id="pm-v-val">40 m/s</div>
+      </div>
+      <div class="ctrl-group">
+        <label>LAUNCH ANGLE (°)</label>
+        <input type="range" id="pm-a" min="5" max="85" value="45" oninput="updatePM()">
+        <div class="val-display" id="pm-a-val">45°</div>
+      </div>
+      <div class="ctrl-group">
+        <label>GRAVITY (m/s²)</label>
+        <input type="range" id="pm-g" min="1" max="25" value="9.8" step="0.1" oninput="updatePM()">
+        <div class="val-display" id="pm-g-val">9.8 m/s²</div>
+      </div>
+      <div class="readout" id="pm-readout">
+        <div class="readout-row"><span class="lbl">Range</span><span class="val" id="pm-range">—</span></div>
+        <div class="readout-row"><span class="lbl">Max Height</span><span class="val" id="pm-height">—</span></div>
+        <div class="readout-row"><span class="lbl">Time of Flight</span><span class="val" id="pm-time">—</span></div>
+        <div class="readout-row"><span class="lbl">Vx</span><span class="val" id="pm-vx">—</span></div>
+        <div class="readout-row"><span class="lbl">Vy (initial)</span><span class="val" id="pm-vy">—</span></div>
+      </div>
+      <button class="run-btn" id="pm-btn" onclick="togglePM()">▶ LAUNCH</button>
+      <button class="reset-btn" onclick="resetPM()">↺ RESET</button>
+    </div>
+  </div>
+</div>
+
+<!-- PENDULUM -->
+<div class="experiment-panel" id="panel-pendulum">
+  <div class="exp-header">
+    <span style="font-size:20px">🕰</span>
+    <div class="exp-title">Simple Pendulum</div>
+    <div class="exp-desc">SHM · period · damping</div>
+  </div>
+  <div class="exp-body">
+    <div class="canvas-col">
+      <canvas id="c-pendulum" width="520" height="340"></canvas>
+    </div>
+    <div class="controls-col">
+      <div class="ctrl-group">
+        <label>LENGTH (m)</label>
+        <input type="range" id="pend-l" min="0.2" max="3" value="1" step="0.1" oninput="updatePend()">
+        <div class="val-display" id="pend-l-val">1.0 m</div>
+      </div>
+      <div class="ctrl-group">
+        <label>START ANGLE (°)</label>
+        <input type="range" id="pend-a" min="5" max="80" value="30" oninput="updatePend()">
+        <div class="val-display" id="pend-a-val">30°</div>
+      </div>
+      <div class="ctrl-group">
+        <label>DAMPING</label>
+        <input type="range" id="pend-d" min="0" max="0.05" value="0.005" step="0.001" oninput="updatePend()">
+        <div class="val-display" id="pend-d-val">0.005</div>
+      </div>
+      <div class="ctrl-group">
+        <label>GRAVITY (m/s²)</label>
+        <input type="range" id="pend-g" min="1" max="25" value="9.8" step="0.1" oninput="updatePend()">
+        <div class="val-display" id="pend-g-val">9.8 m/s²</div>
+      </div>
+      <div class="readout">
+        <div class="readout-row"><span class="lbl">Period T</span><span class="val" id="pend-T">—</span></div>
+        <div class="readout-row"><span class="lbl">Frequency</span><span class="val" id="pend-f">—</span></div>
+        <div class="readout-row"><span class="lbl">Angle θ</span><span class="val" id="pend-theta">—</span></div>
+        <div class="readout-row"><span class="lbl">Angular vel ω</span><span class="val" id="pend-omega">—</span></div>
+      </div>
+      <button class="run-btn" id="pend-btn" onclick="togglePend()">▶ START</button>
+      <button class="reset-btn" onclick="resetPend()">↺ RESET</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAVE -->
+<div class="experiment-panel" id="panel-wave">
+  <div class="exp-header">
+    <span style="font-size:20px">〰️</span>
+    <div class="exp-title">Wave Superposition</div>
+    <div class="exp-desc">interference · standing waves · beats</div>
+  </div>
+  <div class="exp-body">
+    <div class="canvas-col">
+      <canvas id="c-wave" width="520" height="340"></canvas>
+    </div>
+    <div class="controls-col">
+      <div class="ctrl-group">
+        <label>WAVE 1 FREQUENCY (Hz)</label>
+        <input type="range" id="w1-f" min="0.5" max="5" value="2" step="0.1" oninput="updateWave()">
+        <div class="val-display" id="w1-f-val">2.0 Hz</div>
+      </div>
+      <div class="ctrl-group">
+        <label>WAVE 1 AMPLITUDE</label>
+        <input type="range" id="w1-a" min="10" max="60" value="40" oninput="updateWave()">
+        <div class="val-display" id="w1-a-val">40</div>
+      </div>
+      <div class="ctrl-group">
+        <label>WAVE 2 FREQUENCY (Hz)</label>
+        <input type="range" id="w2-f" min="0.5" max="5" value="2.5" step="0.1" oninput="updateWave()">
+        <div class="val-display" id="w2-f-val">2.5 Hz</div>
+      </div>
+      <div class="ctrl-group">
+        <label>WAVE 2 AMPLITUDE</label>
+        <input type="range" id="w2-a" min="10" max="60" value="30" oninput="updateWave()">
+        <div class="val-display" id="w2-a-val">30</div>
+      </div>
+      <div class="readout">
+        <div class="readout-row"><span class="lbl">Beat Freq</span><span class="val" id="w-beat">—</span></div>
+        <div class="readout-row"><span class="lbl">λ₁</span><span class="val" id="w-l1">—</span></div>
+        <div class="readout-row"><span class="lbl">λ₂</span><span class="val" id="w-l2">—</span></div>
+      </div>
+      <button class="run-btn" id="wave-btn" onclick="toggleWave()">▶ ANIMATE</button>
+      <button class="reset-btn" onclick="updateWave()">↺ RESET</button>
+    </div>
+  </div>
+</div>
+
+<!-- CIRCUIT -->
+<div class="experiment-panel" id="panel-circuit">
+  <div class="exp-header">
+    <span style="font-size:20px">⚡</span>
+    <div class="exp-title">RC Circuit</div>
+    <div class="exp-desc">charging · discharging · time constant</div>
+  </div>
+  <div class="exp-body">
+    <div class="canvas-col">
+      <canvas id="c-circuit" width="520" height="340"></canvas>
+    </div>
+    <div class="controls-col">
+      <div class="ctrl-group">
+        <label>RESISTANCE (Ω)</label>
+        <input type="range" id="rc-r" min="100" max="10000" value="1000" step="100" oninput="updateRC()">
+        <div class="val-display" id="rc-r-val">1000 Ω</div>
+      </div>
+      <div class="ctrl-group">
+        <label>CAPACITANCE (μF)</label>
+        <input type="range" id="rc-c" min="10" max="1000" value="100" step="10" oninput="updateRC()">
+        <div class="val-display" id="rc-c-val">100 μF</div>
+      </div>
+      <div class="ctrl-group">
+        <label>EMF VOLTAGE (V)</label>
+        <input type="range" id="rc-v" min="1" max="24" value="9" oninput="updateRC()">
+        <div class="val-display" id="rc-v-val">9 V</div>
+      </div>
+      <div class="readout">
+        <div class="readout-row"><span class="lbl">Time Constant τ</span><span class="val" id="rc-tau">—</span></div>
+        <div class="readout-row"><span class="lbl">Vc at τ</span><span class="val" id="rc-vc">—</span></div>
+        <div class="readout-row"><span class="lbl">5τ (full)</span><span class="val" id="rc-5tau">—</span></div>
+        <div class="readout-row"><span class="lbl">Mode</span><span class="val" id="rc-mode">Charging</span></div>
+      </div>
+      <button class="run-btn" id="rc-btn" onclick="toggleRC()">▶ CHARGE</button>
+      <button class="reset-btn" onclick="resetRC()">↺ RESET</button>
+    </div>
+  </div>
+</div>
+
+<!-- OPTICS -->
+<div class="experiment-panel" id="panel-optics">
+  <div class="exp-header">
+    <span style="font-size:20px">🔭</span>
+    <div class="exp-title">Convex Lens & Ray Diagram</div>
+    <div class="exp-desc">image formation · magnification · lens formula</div>
+  </div>
+  <div class="exp-body">
+    <div class="canvas-col">
+      <canvas id="c-optics" width="520" height="340"></canvas>
+    </div>
+    <div class="controls-col">
+      <div class="ctrl-group">
+        <label>FOCAL LENGTH (cm)</label>
+        <input type="range" id="op-f" min="30" max="150" value="80" oninput="updateOptics()">
+        <div class="val-display" id="op-f-val">80 cm</div>
+      </div>
+      <div class="ctrl-group">
+        <label>OBJECT DISTANCE (cm)</label>
+        <input type="range" id="op-u" min="40" max="300" value="160" oninput="updateOptics()">
+        <div class="val-display" id="op-u-val">160 cm</div>
+      </div>
+      <div class="ctrl-group">
+        <label>OBJECT HEIGHT (cm)</label>
+        <input type="range" id="op-h" min="10" max="60" value="30" oninput="updateOptics()">
+        <div class="val-display" id="op-h-val">30 cm</div>
+      </div>
+      <div class="readout">
+        <div class="readout-row"><span class="lbl">Image Distance v</span><span class="val" id="op-v">—</span></div>
+        <div class="readout-row"><span class="lbl">Magnification m</span><span class="val" id="op-m">—</span></div>
+        <div class="readout-row"><span class="lbl">Image Height</span><span class="val" id="op-ih">—</span></div>
+        <div class="readout-row"><span class="lbl">Image Nature</span><span class="val" id="op-nat">—</span></div>
+      </div>
+      <button class="reset-btn" onclick="updateOptics()">↺ REDRAW</button>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<div class="status-bar">
+  <span><span class="status-dot"></span>SIMULATION RUNNING</span>
+  <span id="sb-exp">Experiment: Projectile Motion</span>
+  <span id="sb-fps">FPS: —</span>
+  <span>PhysLab v2.0 · Tamil Nadu, India</span>
+</div>
+</div>
+
+<script>
+const experiments = {
+  mechanics:[
+    {id:'projectile',label:'Projectile Motion',icon:'🎯',bg:'#1a1a2e'},
+    {id:'pendulum',label:'Simple Pendulum',icon:'🕰',bg:'#1a2a1a'},
+  ],
+  waves:[
+    {id:'wave',label:'Wave Superposition',icon:'〰',bg:'#1a1a2e'},
+  ],
+  em:[
+    {id:'circuit',label:'RC Circuit',icon:'⚡',bg:'#2a1a1a'},
+  ],
+  optics:[
+    {id:'optics',label:'Convex Lens',icon:'🔭',bg:'#1a2a2a'},
+  ]
+};
+
+let currentCategory='mechanics', currentExp='projectile';
+let pmRunning=false,pmAnim=null,pmT=0;
+let pendRunning=false,pendAnim=null,pendTheta=0,pendOmega=0,pendPrev=0;
+let waveRunning=false,waveAnim=null,waveT=0;
+let rcRunning=false,rcAnim=null,rcT=0,rcCharging=true;
+let lastFps=performance.now(),fpsCount=0;
+
+function setCategory(cat){
+  currentCategory=cat;
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['mechanics','waves','em','optics'][i]===cat)
+  });
+  buildSidebar();
+  const firstExp=experiments[cat][0];
+  showExp(firstExp.id);
+}
+
+function buildSidebar(){
+  const list=document.getElementById('exp-list');
+  list.innerHTML='';
+  experiments[currentCategory].forEach(e=>{
+    const b=document.createElement('button');
+    b.className='exp-btn'+(e.id===currentExp?' active':'');
+    b.innerHTML=`<span class="icon" style="background:${e.bg}">${e.icon}</span>${e.label}`;
+    b.onclick=()=>showExp(e.id);
+    list.appendChild(b);
+  });
+}
+
+function showExp(id){
+  currentExp=id;
+  document.querySelectorAll('.experiment-panel').forEach(p=>p.classList.remove('visible'));
+  document.getElementById('panel-'+id).classList.add('visible');
+  document.getElementById('sb-exp').textContent='Experiment: '+experiments[currentCategory].find(e=>e.id===id).label;
+  buildSidebar();
+  if(id==='projectile') initPM();
+  if(id==='pendulum') initPend();
+  if(id==='wave') initWave();
+  if(id==='circuit') initRC();
+  if(id==='optics') updateOptics();
+}
+
+// FPS
+function trackFps(){
+  fpsCount++;
+  const now=performance.now();
+  if(now-lastFps>500){
+    document.getElementById('sb-fps').textContent='FPS: '+(fpsCount/(( now-lastFps)/1000)).toFixed(0);
+    fpsCount=0;lastFps=now;
+  }
+}
+
+// ============ PROJECTILE MOTION ============
+const pmCanvas=document.getElementById('c-projectile');
+const pmCtx=pmCanvas.getContext('2d');
+let pmTrail=[];
+
+function getPMParams(){
+  const v=parseFloat(document.getElementById('pm-v').value);
+  const a=parseFloat(document.getElementById('pm-a').value)*Math.PI/180;
+  const g=parseFloat(document.getElementById('pm-g').value);
+  return {v,a,g};
+}
+
+function updatePM(){
+  const v=document.getElementById('pm-v').value;
+  const a=document.getElementById('pm-a').value;
+  const g=document.getElementById('pm-g').value;
+  document.getElementById('pm-v-val').textContent=v+' m/s';
+  document.getElementById('pm-a-val').textContent=a+'°';
+  document.getElementById('pm-g-val').textContent=parseFloat(g).toFixed(1)+' m/s²';
+  const {v:vel,a:ang,g:grav}=getPMParams();
+  const vx=vel*Math.cos(ang);
+  const vy=vel*Math.sin(ang);
+  const T=2*vy/grav;
+  const R=vx*T;
+  const H=vy*vy/(2*grav);
+  document.getElementById('pm-range').textContent=R.toFixed(1)+' m';
+  document.getElementById('pm-height').textContent=H.toFixed(1)+' m';
+  document.getElementById('pm-time').textContent=T.toFixed(2)+' s';
+  document.getElementById('pm-vx').textContent=vx.toFixed(1)+' m/s';
+  document.getElementById('pm-vy').textContent=vy.toFixed(1)+' m/s';
+  if(!pmRunning) drawPM(0);
+}
+
+function initPM(){
+  pmTrail=[];pmT=0;
+  updatePM();
+  drawPM(0);
+}
+
+function drawPM(t){
+  const ctx=pmCtx;
+  const W=pmCanvas.width,H=pmCanvas.height;
+  ctx.fillStyle='#070d1a';ctx.fillRect(0,0,W,H);
+  const {v:vel,a:ang,g:grav}=getPMParams();
+  const vx=vel*Math.cos(ang);
+  const vy=vel*Math.sin(ang);
+  const T=2*vy/grav;
+  const R=vx*T;
+  const maxH=vy*vy/(2*grav);
+  const scaleX=(W-60)/Math.max(R,1);
+  const scaleY=(H-60)/Math.max(maxH*1.2,1);
+  const ox=30,oy=H-30;
+
+  // Grid
+  ctx.strokeStyle='#1a2a3a';ctx.lineWidth=1;
+  for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+  for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+
+  // Ground
+  ctx.strokeStyle='#2a4a6a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();
+
+  // Trajectory path (dashed)
+  ctx.strokeStyle='#1a3a5a';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  for(let s=0;s<=1;s+=0.01){
+    const tt=s*T;
+    const px=ox+vx*tt*scaleX;
+    const py=oy-(vy*tt-0.5*grav*tt*tt)*scaleY;
+    s===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.stroke();ctx.setLineDash([]);
+
+  // Trail
+  if(pmTrail.length>1){
+    ctx.beginPath();
+    const grad=ctx.createLinearGradient(0,0,W,0);
+    grad.addColorStop(0,'rgba(0,212,255,0)');
+    grad.addColorStop(1,'rgba(0,212,255,0.8)');
+    ctx.strokeStyle=grad;ctx.lineWidth=2.5;
+    ctx.moveTo(pmTrail[0].x,pmTrail[0].y);
+    pmTrail.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.stroke();
+  }
+
+  // Ball
+  if(t<=T){
+    const px=ox+vx*t*scaleX;
+    const py=oy-(vy*t-0.5*grav*t*t)*scaleY;
+    pmTrail.push({x:px,y:py});
+    if(pmTrail.length>200) pmTrail.shift();
+    ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);
+    ctx.fillStyle='#00d4ff';ctx.fill();
+    ctx.beginPath();ctx.arc(px,py,12,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,212,255,0.2)';ctx.fill();
+  }
+
+  // Launch arrow
+  if(t<0.1){
+    ctx.save();ctx.translate(ox,oy);ctx.rotate(-ang);
+    ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(40,0);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Labels
+  ctx.fillStyle='#64748b';ctx.font='10px Space Mono,monospace';
+  ctx.fillText('x (m)',W-40,oy-8);
+  ctx.fillText('y (m)',ox+5,18);
+}
+
+function togglePM(){
+  if(pmRunning){
+    pmRunning=false;cancelAnimationFrame(pmAnim);
+    document.getElementById('pm-btn').textContent='▶ LAUNCH';
+    document.getElementById('pm-btn').classList.remove('stop');
+  } else {
+    pmRunning=true;pmT=0;pmTrail=[];
+    document.getElementById('pm-btn').textContent='■ STOP';
+    document.getElementById('pm-btn').classList.add('stop');
+    animPM();
+  }
+}
+
+function animPM(){
+  if(!pmRunning) return;
+  trackFps();
+  const {v:vel,a:ang,g:grav}=getPMParams();
+  const vy=vel*Math.sin(ang);
+  const T=2*vy/grav;
+  drawPM(pmT);
+  pmT+=0.016;
+  if(pmT>T+0.1){
+    pmRunning=false;
+    document.getElementById('pm-btn').textContent='▶ LAUNCH';
+    document.getElementById('pm-btn').classList.remove('stop');
+    return;
+  }
+  pmAnim=requestAnimationFrame(animPM);
+}
+
+function resetPM(){
+  pmRunning=false;cancelAnimationFrame(pmAnim);
+  pmT=0;pmTrail=[];
+  document.getElementById('pm-btn').textContent='▶ LAUNCH';
+  document.getElementById('pm-btn').classList.remove('stop');
+  drawPM(0);
+}
+
+// ============ PENDULUM ============
+const pendCanvas=document.getElementById('c-pendulum');
+const pendCtx=pendCanvas.getContext('2d');
+let pendAngleHistory=[];
+
+function getPendParams(){
+  const L=parseFloat(document.getElementById('pend-l').value);
+  const a0=parseFloat(document.getElementById('pend-a').value)*Math.PI/180;
+  const d=parseFloat(document.getElementById('pend-d').value);
+  const g=parseFloat(document.getElementById('pend-g').value);
+  return {L,a0,d,g};
+}
+
+function updatePend(){
+  document.getElementById('pend-l-val').textContent=document.getElementById('pend-l').value+' m';
+  document.getElementById('pend-a-val').textContent=document.getElementById('pend-a').value+'°';
+  document.getElementById('pend-d-val').textContent=document.getElementById('pend-d').value;
+  document.getElementById('pend-g-val').textContent=parseFloat(document.getElementById('pend-g').value).toFixed(1)+' m/s²';
+  const {L,g}=getPendParams();
+  const T=2*Math.PI*Math.sqrt(L/g);
+  document.getElementById('pend-T').textContent=T.toFixed(3)+' s';
+  document.getElementById('pend-f').textContent=(1/T).toFixed(3)+' Hz';
+}
+
+function initPend(){
+  const {a0}=getPendParams();
+  pendTheta=a0;pendOmega=0;pendAngleHistory=[];
+  updatePend();
+  drawPend();
+}
+
+function drawPend(){
+  const ctx=pendCtx;
+  const W=pendCanvas.width,H=pendCanvas.height;
+  const {L}=getPendParams();
+  ctx.fillStyle='#070d1a';ctx.fillRect(0,0,W,H);
+  const scale=Math.min((H-80)/L/1.2, 120);
+  const px=W/2,py=40;
+  const bx=px+Math.sin(pendTheta)*L*scale;
+  const by=py+Math.cos(pendTheta)*L*scale;
+
+  // Grid
+  ctx.strokeStyle='#1a2a3a';ctx.lineWidth=1;
+  for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+  for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+
+  // Angle trace
+  if(pendAngleHistory.length>2){
+    const tw=W-20,th=60,tx=10,ty=H-70;
+    ctx.fillStyle='rgba(7,13,26,0.7)';ctx.fillRect(tx,ty,tw,th);
+    ctx.strokeStyle='#1a3a5a';ctx.lineWidth=1;ctx.strokeRect(tx,ty,tw,th);
+    ctx.strokeStyle='#00d4ff';ctx.lineWidth=1.5;ctx.beginPath();
+    pendAngleHistory.forEach((v,i)=>{
+      const x2=tx+i/pendAngleHistory.length*tw;
+      const y2=ty+th/2-v*th/2*0.8;
+      i===0?ctx.moveTo(x2,y2):ctx.lineTo(x2,y2);
+    });
+    ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.font='9px Space Mono,monospace';
+    ctx.fillText('θ(t)',tx+4,ty+12);
+  }
+
+  // Pivot
+  ctx.fillStyle='#2a4a6a';ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#7c3aed';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+
+  // Rod
+  ctx.strokeStyle='#3a5a7a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx,by);ctx.stroke();
+
+  // Bob
+  ctx.beginPath();ctx.arc(bx,by,14,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,212,255,0.15)';ctx.fill();
+  ctx.beginPath();ctx.arc(bx,by,10,0,Math.PI*2);
+  ctx.fillStyle='#00d4ff';ctx.fill();
+
+  // Angle arc
+  ctx.strokeStyle='rgba(245,158,11,0.4)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,py+60);ctx.stroke();
+  ctx.setLineDash([]);
+
+  document.getElementById('pend-theta').textContent=(pendTheta*180/Math.PI).toFixed(1)+'°';
+  document.getElementById('pend-omega').textContent=pendOmega.toFixed(3)+' rad/s';
+}
+
+function togglePend(){
+  if(pendRunning){
+    pendRunning=false;cancelAnimationFrame(pendAnim);
+    document.getElementById('pend-btn').textContent='▶ START';
+    document.getElementById('pend-btn').classList.remove('stop');
+  } else {
+    const {a0}=getPendParams();
+    pendTheta=a0;pendOmega=0;pendAngleHistory=[];
+    pendRunning=true;
+    document.getElementById('pend-btn').textContent='■ STOP';
+    document.getElementById('pend-btn').classList.add('stop');
+    animPend();
+  }
+}
+
+let pendLast=null;
+function animPend(ts){
+  if(!pendRunning) return;
+  trackFps();
+  if(!pendLast) pendLast=ts;
+  const dt=Math.min((ts-pendLast)/1000,0.02);
+  pendLast=ts;
+  const {L,d,g}=getPendParams();
+  const alpha=-(g/L)*Math.sin(pendTheta)-d*pendOmega;
+  pendOmega+=alpha*dt;
+  pendTheta+=pendOmega*dt;
+  pendAngleHistory.push(pendTheta);
+  if(pendAngleHistory.length>300) pendAngleHistory.shift();
+  drawPend();
+  pendAnim=requestAnimationFrame(animPend);
+}
+
+function resetPend(){
+  pendRunning=false;cancelAnimationFrame(pendAnim);pendLast=null;
+  document.getElementById('pend-btn').textContent='▶ START';
+  document.getElementById('pend-btn').classList.remove('stop');
+  initPend();
+}
+
+// ============ WAVE ============
+const waveCanvas=document.getElementById('c-wave');
+const waveCtx=waveCanvas.getContext('2d');
+
+function updateWave(){
+  document.getElementById('w1-f-val').textContent=parseFloat(document.getElementById('w1-f').value).toFixed(1)+' Hz';
+  document.getElementById('w1-a-val').textContent=document.getElementById('w1-a').value;
+  document.getElementById('w2-f-val').textContent=parseFloat(document.getElementById('w2-f').value).toFixed(1)+' Hz';
+  document.getElementById('w2-a-val').textContent=document.getElementById('w2-a').value;
+  const f1=parseFloat(document.getElementById('w1-f').value);
+  const f2=parseFloat(document.getElementById('w2-f').value);
+  const v=343;
+  document.getElementById('w-beat').textContent=Math.abs(f1-f2).toFixed(1)+' Hz';
+  document.getElementById('w-l1').textContent=(v/f1).toFixed(1)+' m';
+  document.getElementById('w-l2').textContent=(v/f2).toFixed(1)+' m';
+  if(!waveRunning) drawWave(0);
+}
+
+function initWave(){updateWave();}
+
+function drawWave(t){
+  const ctx=waveCtx;
+  const W=waveCanvas.width,H=waveCanvas.height;
+  const f1=parseFloat(document.getElementById('w1-f').value);
+  const a1=parseFloat(document.getElementById('w1-a').value);
+  const f2=parseFloat(document.getElementById('w2-f').value);
+  const a2=parseFloat(document.getElementById('w2-a').value);
+  ctx.fillStyle='#070d1a';ctx.fillRect(0,0,W,H);
+
+  const mid1=H/4,mid2=H*2/4,mid3=H*3.2/4;
+  const labels=['Wave 1','Wave 2','Resultant'];
+  const colors=['#7c3aed','#10b981','#00d4ff'];
+  const mids=[mid1,mid2,mid3];
+  const amps=[a1,a2,0];
+
+  ctx.strokeStyle='#1a2a3a';ctx.lineWidth=1;
+  for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+  for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+
+  [0,1,2].forEach(wi=>{
+    ctx.strokeStyle=colors[wi];ctx.lineWidth=wi===2?2.5:1.5;
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const ph=x/W*4*Math.PI;
+      let y;
+      if(wi===0) y=mids[wi]-a1*Math.sin(2*Math.PI*f1*t+ph);
+      else if(wi===1) y=mids[wi]-a2*Math.sin(2*Math.PI*f2*t+ph);
+      else y=mids[wi]-(a1*Math.sin(2*Math.PI*f1*t+ph)+a2*Math.sin(2*Math.PI*f2*t+ph));
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.fillStyle=colors[wi];ctx.font='10px Space Mono,monospace';
+    ctx.fillText(labels[wi],8,mids[wi]-45);
+    ctx.strokeStyle=colors[wi]+'33';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+    ctx.beginPath();ctx.moveTo(0,mids[wi]);ctx.lineTo(W,mids[wi]);ctx.stroke();
+    ctx.setLineDash([]);
+  });
+}
+
+function toggleWave(){
+  if(waveRunning){
+    waveRunning=false;cancelAnimationFrame(waveAnim);
+    document.getElementById('wave-btn').textContent='▶ ANIMATE';
+    document.getElementById('wave-btn').classList.remove('stop');
+  } else {
+    waveRunning=true;
+    document.getElementById('wave-btn').textContent='■ STOP';
+    document.getElementById('wave-btn').classList.add('stop');
+    animWave();
+  }
+}
+
+function animWave(){
+  if(!waveRunning) return;
+  trackFps();
+  waveT+=0.016;
+  drawWave(waveT);
+  waveAnim=requestAnimationFrame(animWave);
+}
+
+// ============ RC CIRCUIT ============
+const rcCanvas=document.getElementById('c-circuit');
+const rcCtx=rcCanvas.getContext('2d');
+let rcData=[];
+
+function updateRC(){
+  document.getElementById('rc-r-val').textContent=document.getElementById('rc-r').value+' Ω';
+  document.getElementById('rc-c-val').textContent=document.getElementById('rc-c').value+' μF';
+  document.getElementById('rc-v-val').textContent=document.getElementById('rc-v').value+' V';
+  const R=parseFloat(document.getElementById('rc-r').value);
+  const C=parseFloat(document.getElementById('rc-c').value)*1e-6;
+  const V=parseFloat(document.getElementById('rc-v').value);
+  const tau=R*C;
+  document.getElementById('rc-tau').textContent=(tau*1000).toFixed(2)+' ms';
+  document.getElementById('rc-vc').textContent=(V*(1-Math.exp(-1))).toFixed(2)+' V';
+  document.getElementById('rc-5tau').textContent=(5*tau*1000).toFixed(1)+' ms';
+  if(!rcRunning) drawRC();
+}
+
+function initRC(){
+  rcData=[];rcT=0;rcCharging=true;
+  updateRC();
+  drawRC();
+}
+
+function drawRC(){
+  const ctx=rcCtx;
+  const W=rcCanvas.width,H=rcCanvas.height;
+  const R=parseFloat(document.getElementById('rc-r').value);
+  const C=parseFloat(document.getElementById('rc-c').value)*1e-6;
+  const V=parseFloat(document.getElementById('rc-v').value);
+  const tau=R*C;
+  ctx.fillStyle='#070d1a';ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='#1a2a3a';ctx.lineWidth=1;
+  for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+  for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+
+  const gx=50,gy=20,gw=W-70,gh=H-80;
+  const maxT=tau*6;
+  const scale=gw/maxT;
+
+  // Axes
+  ctx.strokeStyle='#2a4a6a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx,gy+gh);ctx.lineTo(gx+gw,gy+gh);ctx.stroke();
+
+  // Tau markers
+  for(let i=1;i<=6;i++){
+    const x2=gx+i*tau*scale;
+    if(x2>gx+gw) break;
+    ctx.strokeStyle='rgba(245,158,11,0.25)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(x2,gy);ctx.lineTo(x2,gy+gh);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#f59e0b';ctx.font='9px Space Mono,monospace';
+    ctx.fillText(i+'τ',x2-6,gy+gh+14);
+  }
+
+  // V∞ line
+  ctx.strokeStyle='rgba(16,185,129,0.3)';ctx.lineWidth=1;ctx.setLineDash([5,5]);
+  ctx.beginPath();ctx.moveTo(gx,gy+2);ctx.lineTo(gx+gw,gy+2);ctx.stroke();ctx.setLineDash([]);
+
+  // Theoretical curve
+  ctx.strokeStyle='rgba(0,212,255,0.2)';ctx.lineWidth=1.5;ctx.beginPath();
+  for(let x3=0;x3<=gw;x3+=2){
+    const t2=x3/scale;
+    const vc=rcCharging?V*(1-Math.exp(-t2/tau)):V*Math.exp(-t2/tau);
+    const y2=gy+gh-vc/V*gh;
+    x3===0?ctx.moveTo(gx+x3,y2):ctx.lineTo(gx+x3,y2);
+  }
+  ctx.stroke();
+
+  // Actual data
+  if(rcData.length>1){
+    ctx.strokeStyle='#00d4ff';ctx.lineWidth=2.5;ctx.beginPath();
+    rcData.forEach((p,i)=>{
+      const x4=gx+p.t*scale;
+      const y4=gy+gh-p.v/V*gh;
+      if(x4>gx+gw) return;
+      i===0?ctx.moveTo(x4,y4):ctx.lineTo(x4,y4);
+    });
+    ctx.stroke();
+    const last=rcData[rcData.length-1];
+    const lx=gx+last.t*scale;
+    const ly=gy+gh-last.v/V*gh;
+    if(lx<=gx+gw){
+      ctx.beginPath();ctx.arc(lx,ly,6,0,Math.PI*2);
+      ctx.fillStyle='#00d4ff';ctx.fill();
+    }
+  }
+
+  // Labels
+  ctx.fillStyle='#64748b';ctx.font='10px Space Mono,monospace';
+  ctx.fillText('Vc (V)',gx-42,gy+10);
+  ctx.fillText('t',gx+gw+8,gy+gh+4);
+  ctx.fillStyle='#10b981';ctx.fillText('V∞='+V+'V',gx+gw-50,gy+14);
+}
+
+function toggleRC(){
+  if(rcRunning){
+    rcRunning=false;cancelAnimationFrame(rcAnim);
+    document.getElementById('rc-btn').textContent='▶ CHARGE';
+    document.getElementById('rc-btn').classList.remove('stop');
+  } else {
+    rcData=[];rcT=0;
+    rcRunning=true;
+    document.getElementById('rc-btn').textContent='■ STOP';
+    document.getElementById('rc-btn').classList.add('stop');
+    animRC();
+  }
+}
+
+function animRC(){
+  if(!rcRunning) return;
+  trackFps();
+  const R=parseFloat(document.getElementById('rc-r').value);
+  const C=parseFloat(document.getElementById('rc-c').value)*1e-6;
+  const V=parseFloat(document.getElementById('rc-v').value);
+  const tau=R*C;
+  const vc=rcCharging?V*(1-Math.exp(-rcT/tau)):V*Math.exp(-rcT/tau);
+  rcData.push({t:rcT,v:vc});
+  rcT+=tau/60;
+  document.getElementById('rc-mode').textContent=rcCharging?'Charging':'Discharging';
+  drawRC();
+  if(rcT>tau*6){
+    rcRunning=false;
+    document.getElementById('rc-btn').textContent='▶ CHARGE';
+    document.getElementById('rc-btn').classList.remove('stop');
+    return;
+  }
+  rcAnim=requestAnimationFrame(animRC);
+}
+
+function resetRC(){
+  rcRunning=false;cancelAnimationFrame(rcAnim);
+  rcCharging=!rcCharging;
+  document.getElementById('rc-btn').textContent=rcCharging?'▶ CHARGE':'▶ DISCHARGE';
+  document.getElementById('rc-mode').textContent=rcCharging?'Charging':'Discharging';
+  initRC();
+}
+
+// ============ OPTICS ============
+const opCanvas=document.getElementById('c-optics');
+const opCtx=opCanvas.getContext('2d');
+
+function updateOptics(){
+  const f=parseFloat(document.getElementById('op-f').value);
+  const u=parseFloat(document.getElementById('op-u').value);
+  const h=parseFloat(document.getElementById('op-h').value);
+  document.getElementById('op-f-val').textContent=f+' cm';
+  document.getElementById('op-u-val').textContent=u+' cm';
+  document.getElementById('op-h-val').textContent=h+' cm';
+  const v=1/(1/f-1/(-u))*(-1);
+  const vv=(f*u)/(u-f);
+  const m=-vv/u;
+  const ih=m*h;
+  document.getElementById('op-v').textContent=vv.toFixed(1)+' cm';
+  document.getElementById('op-m').textContent=m.toFixed(2)+'x';
+  document.getElementById('op-ih').textContent=Math.abs(ih).toFixed(1)+' cm';
+  const nat=vv>0?(Math.abs(m)<1?'Real, Diminished':'Real, Magnified'):'Virtual, Erect';
+  document.getElementById('op-nat').textContent=nat;
+  drawOptics(f,u,h,vv,m,ih);
+}
+
+function drawOptics(f,u,h,vv,m,ih){
+  const ctx=opCtx;
+  const W=opCanvas.width,H=opCanvas.height;
+  ctx.fillStyle='#070d1a';ctx.fillRect(0,0,W,H);
+  const lx=W/2,cy=H/2;
+  const scale=Math.min(W*0.35/u,H*0.35/h,1.5);
+
+  // Grid
+  ctx.strokeStyle='#1a2a3a';ctx.lineWidth=1;
+  for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+  for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+
+  // Optical axis
+  ctx.strokeStyle='#2a4a6a';ctx.lineWidth=1;ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();ctx.setLineDash([]);
+
+  // Lens
+  ctx.strokeStyle='#7c3aed';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(lx,cy-80);ctx.lineTo(lx,cy+80);ctx.stroke();
+  // Lens arrows
+  ctx.fillStyle='#7c3aed';
+  [[lx,cy-80,-1],[lx,cy+80,1]].forEach(([x2,y2,dir])=>{
+    ctx.beginPath();ctx.moveTo(x2-8,y2-dir*14);ctx.lineTo(x2,y2);ctx.lineTo(x2+8,y2-dir*14);ctx.fill();
+  });
+
+  // Focal points
+  const fs=f*scale;
+  ctx.fillStyle='#f59e0b';
+  [lx-fs,lx+fs].forEach(fx=>{
+    ctx.beginPath();ctx.arc(fx,cy,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#64748b';ctx.font='9px Space Mono,monospace';
+    ctx.fillText('F',fx-4,cy+16);ctx.fillStyle='#f59e0b';
+  });
+
+  // Object
+  const ox=lx-u*scale;
+  const oh=h*scale;
+  ctx.strokeStyle='#10b981';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(ox,cy);ctx.lineTo(ox,cy-oh);ctx.stroke();
+  ctx.fillStyle='#10b981';
+  ctx.beginPath();ctx.moveTo(ox-7,cy-oh+12);ctx.lineTo(ox,cy-oh);ctx.lineTo(ox+7,cy-oh+12);ctx.fill();
+  ctx.font='10px Space Mono,monospace';ctx.fillStyle='#10b981';ctx.fillText('Object',ox-24,cy+14);
+
+  // Rays
+  const ivv=vv*scale;
+  const iih=ih*scale;
+  const ix=lx+ivv;
+  ctx.lineWidth=1.5;
+
+  // Ray 1: parallel then through far F
+  ctx.strokeStyle='rgba(0,212,255,0.7)';ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(ox,cy-oh);ctx.lineTo(lx,cy-oh);
+  ctx.lineTo(ix,cy-iih);ctx.stroke();
+
+  // Ray 2: through center
+  ctx.strokeStyle='rgba(245,158,11,0.7)';
+  ctx.beginPath();ctx.moveTo(ox,cy-oh);ctx.lineTo(ix,cy-iih);ctx.stroke();
+
+  // Ray 3: through near F then parallel
+  ctx.strokeStyle='rgba(239,68,68,0.7)';
+  const nearFx=lx-fs;
+  ctx.beginPath();ctx.moveTo(ox,cy-oh);ctx.lineTo(nearFx,cy);
+  ctx.lineTo(lx,cy-oh);ctx.lineTo(ix,cy-iih);ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  // Image
+  if(vv>0 && ix>0 && ix<W){
+    ctx.strokeStyle='#00d4ff';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(ix,cy);ctx.lineTo(ix,cy-iih);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#00d4ff';
+    ctx.beginPath();ctx.moveTo(ix-6,cy-iih+10);ctx.lineTo(ix,cy-iih);ctx.lineTo(ix+6,cy-iih+10);ctx.fill();
+    ctx.font='10px Space Mono,monospace';ctx.fillText('Image',ix-20,cy+14);
+  }
+
+  // Labels
+  ctx.fillStyle='#7c3aed';ctx.font='11px Space Mono,monospace';ctx.fillText('Lens',lx+6,cy-85);
+}
+
+// Init
+setCategory('mechanics');
+showExp('projectile');
+</script>
